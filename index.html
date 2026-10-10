@@ -146,7 +146,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     <div class="bar" aria-hidden="true"><i id="barFill"></i><b id="barMark"></b></div>
     <div class="step" id="step">
       <div class="what" id="stepWhat">Put the V60 and cup on the scale</div>
-      <div class="how" id="stepHow">Rinse the paper, add the ground coffee, then press Tare. The timer starts by itself when you begin pouring.</div>
+      <div class="how" id="stepHow">Rinse the paper, add the ground coffee and press Start. The scale tares itself and the timer starts as soon as you begin pouring.</div>
       <div class="meta"><span id="stepTarget"></span><span class="pace" id="pace"></span></div>
     </div>
     <div class="next" id="next"></div>
@@ -342,6 +342,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     st.phase = "brewing";
     st.t0 = performance.now();
     st.stepIdx = 0; st.stepStartT = 0; st.stepStartW = 0;
+    st.lastTick = null; st.lateCued = false;
     keepAwake(true);
     cue();
   }
@@ -349,7 +350,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     st.finalT = now();
     st.phase = "done";
     keepAwake(false);
-    cue(true);
+    cue("end");
   }
   function resetBrew() {
     st.phase = "idle"; st.stepIdx = 0; st.finalT = 0;
@@ -360,6 +361,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     st.stepIdx++;
     st.stepStartT = t;
     st.stepStartW = st.weight;
+    st.lastTick = null; st.lateCued = false;
     // Skip waits that are already over (someone poured slowly).
     while (st.stepIdx < st.plan.length && st.plan[st.stepIdx].kind === "wait" && t >= st.plan[st.stepIdx].until) st.stepIdx++;
     if (st.stepIdx >= st.plan.length) { finishBrew(); return; }
@@ -376,6 +378,11 @@ details code { font-family: var(--mono); word-break: break-all; }
       const t = now(), s = st.plan[st.stepIdx];
       if (s.kind === "pour" && st.weight >= s.target - 1) advance(t);
       else if (s.kind === "wait" && t >= s.until) advance(t);
+      else if (s.kind === "wait") {
+        // Count down the last 3 seconds before the next pour.
+        const left = Math.ceil(s.until - t);
+        if (left <= 3 && left >= 1 && st.lastTick !== left) { st.lastTick = left; cue("tick"); }
+      } else if (s.kind === "pour" && t > s.by + 3 && !st.lateCued) { st.lateCued = true; cue("late"); }
     }
     renderBrew();
   }
@@ -420,7 +427,7 @@ details code { font-family: var(--mono); word-break: break-all; }
       what = st.phase === "armed" ? `Start pouring: bloom to ${first.target} g` : "Put the V60 and cup on the scale";
       how = st.phase === "armed"
         ? "The timer starts as soon as the scale sees water."
-        : "Rinse the paper, add the ground coffee, then press Tare. The timer starts by itself when you begin pouring.";
+        : "Rinse the paper, add the ground coffee and press Start. The scale tares itself and the timer starts as soon as you begin pouring.";
       mark = first.target / W;
       next = `Total: ${W} g of water at ${RECIPES[st.recipe].temp || ROASTS[st.roast].temp}`;
     } else if (st.phase === "done") {
@@ -472,17 +479,35 @@ details code { font-family: var(--mono); word-break: break-all; }
 
   // ---------- Cues: vibration, a short beep, screen awake ----------
   let audio = null, wake = null;
-  function cue(end) {
-    try { navigator.vibrate && navigator.vibrate(end ? [120, 80, 120] : 90); } catch {}
+  // kind: "step" (next step), "tick" (countdown before a pour), "late" (pour deadline passed), "end".
+  const CUES = {
+    step: { vib: 90, tones: [880] },
+    tick: { vib: 30, tones: [660], len: 0.07, vol: 0.12 },
+    late: { vib: [60, 60, 60], tones: [440, 440] },
+    end:  { vib: [120, 80, 120], tones: [660, 880] },
+  };
+  function unlockAudio() {
+    // Browsers only allow sound after a tap, so open the audio channel from the Start button.
     try {
       audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      const o = audio.createOscillator(), g = audio.createGain();
-      o.frequency.value = end ? 660 : 880;
-      g.gain.setValueAtTime(0.0001, audio.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.2, audio.currentTime + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.18);
-      o.connect(g).connect(audio.destination);
-      o.start(); o.stop(audio.currentTime + 0.2);
+      if (audio.state === "suspended") audio.resume();
+    } catch {}
+  }
+  function cue(kind) {
+    const c = CUES[kind === true ? "end" : kind || "step"];
+    try { navigator.vibrate && navigator.vibrate(c.vib); } catch {}
+    try {
+      unlockAudio();
+      const len = c.len || 0.18;
+      c.tones.forEach((f, i) => {
+        const o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime + i * (len + 0.08);
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(c.vol || 0.25, t0 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+        o.connect(g).connect(audio.destination);
+        o.start(t0); o.stop(t0 + len + 0.02);
+      });
     } catch {}
   }
   async function keepAwake(on) {
@@ -594,6 +619,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     if (st.phase === "brewing") { finishBrew(); renderPlan(); renderBrew(); return; }
     if (st.phase === "done") resetBrew();
     // Start arms auto-start: tare, then the timer begins with the first water.
+    unlockAudio();
     await tare();
     st.phase = "armed";
     st.sawZero = !!demo; // the demo tares instantly
