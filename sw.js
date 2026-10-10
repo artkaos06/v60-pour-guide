@@ -1,5 +1,5 @@
 // Offline support: serve the app from cache, refresh it from the network when online.
-const CACHE = "pour-guide-v2";
+const CACHE = "pour-guide-v3";
 const FILES = ["./", "index.html", "recipes.json", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {

@@ -220,6 +220,13 @@ details code { font-family: var(--mono); word-break: break-all; }
       ],
     },
   };
+  // Baratza Encore ESP Pro: 0–60 in half steps, 40–60 is the filter range.
+  // Starting points for a standard 15 g V60, per roast. Darker roasts extract faster, so grind coarser.
+  const GRINDER = { name: "Encore ESP Pro", base: { light: 46.5, medium: 47, dark: 48 }, min: 40, max: 60 };
+  function grindSetting() {
+    const v = GRINDER.base[st.roast] + (RECIPES[st.recipe].grindOffset || 0);
+    return Math.min(GRINDER.max, Math.max(GRINDER.min, Math.round(v * 2) / 2));
+  }
   const ROASTS = {
     light:  { name: "Light",  temp: "96–100 °C", ratioAdj: 0,  grind: "a touch finer" },
     medium: { name: "Medium", temp: "92–94 °C",  ratioAdj: 0,  grind: "as listed" },
@@ -301,6 +308,7 @@ details code { font-family: var(--mono); word-break: break-all; }
       ["Ratio", "1:" + ratio().toFixed(1).replace(/\.0$/, "")],
       ["Water temperature", R.temp || ro.temp],
       ["Grind", R.grind + ", " + ro.grind],
+      [GRINDER.name, grindSetting() + "  (try " + (grindSetting() - 1) + "–" + (grindSetting() + 1) + ")"],
     ];
     $("specs").innerHTML = specs.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join("");
   }
@@ -433,6 +441,14 @@ details code { font-family: var(--mono); word-break: break-all; }
     } else if (st.phase === "done") {
       what = "Enjoy your coffee";
       how = `Brewed ${fmtG(st.weight)} g of water in ${fmtT(st.finalT)} with ${st.dose} g of coffee (1:${(st.weight / st.dose).toFixed(1)}).`;
+      // Grind advice from how the drawdown went against the recipe's target finish.
+      const end = st.plan[st.plan.length - 1], g = grindSetting();
+      if (end && end.until) {
+        const diff = st.finalT - end.until;
+        if (diff > 20) target = `Finished ${Math.round(diff)} s late. Next time try ${g + 1} on the ${GRINDER.name}.`;
+        else if (diff < -20) target = `Finished ${Math.round(-diff)} s early. Next time try ${g - 1} on the ${GRINDER.name}.`;
+        else target = `Right on time. Keep ${g} on the ${GRINDER.name}.`;
+      }
       fill = 1;
     } else {
       const s = st.plan[st.stepIdx];
