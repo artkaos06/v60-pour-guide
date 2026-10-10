@@ -11,3 +11,7 @@ Built for the KP2048B Smart Kitchen Scale.
 ## Recipes
 
 Recipes live in `recipes.json`. Each pour target is a fraction of the total water (`to`) or a multiple of the coffee dose (`toDose`); `by` and `until` are seconds from the first pour. Send Claude a recipe link to add one.
+
+## Install on your phone
+
+Open the site in Chrome on Android, tap the ⋮ menu, then **Install app** (or **Add to Home screen**). It opens full screen from its own icon and works offline after the first visit.
