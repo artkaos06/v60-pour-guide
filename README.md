@@ -5,3 +5,5 @@ A step-by-step V60 brew guide driven by live weight from a Bluetooth scale (KP20
 Open https://artkaos06.github.io/v60-pour-guide/ in Chrome on Android or a computer, press **Connect scale**, pick `MY_SCALE`, choose a recipe and roast, then press **Start**. The timer starts when water hits the scale.
 
 Recipes: Hoffmann one cup, Hoffmann Ultimate, Kasuya 4:6.
+
+Built for the KP2048B Smart Kitchen Scale.
