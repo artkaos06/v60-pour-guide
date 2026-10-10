@@ -98,13 +98,34 @@ ol.plan li.now { background: var(--track); font-weight: 600; }
 details { font-size: 0.85rem; color: var(--muted); }
 details code { font-family: var(--mono); word-break: break-all; }
 .done-card .what { color: var(--ok); }
+.head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.toggle { min-height: 36px; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; border-radius: 999px; }
+.toggle[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.rate { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.stars { display: flex; gap: 6px; }
+.stars button { flex: 1; min-height: 44px; padding: 0; font-size: 1.3rem; color: var(--muted); }
+.stars button[aria-pressed="true"] { color: var(--pour); border-color: var(--pour); }
+.fields { display: grid; grid-template-columns: 7.5em 1fr; gap: 8px; }
+.fields label { display: grid; gap: 4px; font-size: 0.75rem; color: var(--muted); min-width: 0; }
+.fields input { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 1rem; }
+.saved { font-size: 0.8rem; color: var(--ok); }
+ul.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+ul.log li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 0.9rem; min-width: 0; }
+ul.log .l1 { font-weight: 600; min-width: 0; }
+ul.log .l2 { grid-column: 1; font-family: var(--mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+ul.log .l3 { grid-column: 1 / -1; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
+ul.log button { grid-column: 2; grid-row: 1 / span 2; align-self: center; min-height: 36px; padding: 4px 10px; font-size: 0.8rem; font-weight: 500; }
+.empty { color: var(--muted); font-size: 0.9rem; margin: 0; }
 @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
 </style>
 
 <div class="wrap">
   <header class="top">
     <h1>V60 Pour Guide</h1>
-    <span class="chip" id="chip" data-s="off"><span class="dot"></span><span id="chipText">Scale not connected</span></span>
+    <div class="head-right">
+      <button class="toggle" id="btnVoice" aria-pressed="true">Voice on</button>
+      <span class="chip" id="chip" data-s="off"><span class="dot"></span><span id="chipText">Scale not connected</span></span>
+    </div>
   </header>
 
   <div class="row">
@@ -150,6 +171,17 @@ details code { font-family: var(--mono); word-break: break-all; }
       <div class="meta"><span id="stepTarget"></span><span class="pace" id="pace"></span></div>
     </div>
     <div class="next" id="next"></div>
+    <div class="rate" id="rate" hidden>
+      <div>
+        <h2>How was it?</h2>
+        <div class="stars" id="stars"></div>
+      </div>
+      <div class="fields">
+        <label>Grind used<input id="grindUsed" type="number" inputmode="decimal" step="0.5" min="0" max="60"></label>
+        <label>Notes<input id="note" type="text" maxlength="140" placeholder="Sweet, a bit sour, bitter…"></label>
+      </div>
+      <div class="saved" id="savedMsg">Saved to your brew log.</div>
+    </div>
     <div class="row">
       <button id="btnTare">Tare</button>
       <button class="primary" id="btnStart">Start</button>
@@ -163,6 +195,12 @@ details code { font-family: var(--mono); word-break: break-all; }
       <summary>Scale details</summary>
       <p>Last packet: <code id="raw">none yet</code></p>
     </details>
+  </section>
+
+  <section class="panel" id="logPanel">
+    <h2>Brew log</h2>
+    <p class="empty" id="logEmpty">Your brews appear here after each cup, with the grind you used and your rating.</p>
+    <ul class="log" id="log"></ul>
   </section>
 </div>
 
@@ -223,9 +261,17 @@ details code { font-family: var(--mono); word-break: break-all; }
   // Baratza Encore ESP Pro: 0–60 in half steps, 40–60 is the filter range.
   // Starting points for a standard 15 g V60, per roast. Darker roasts extract faster, so grind coarser.
   const GRINDER = { name: "Encore ESP Pro", base: { light: 46.5, medium: 47, dark: 48 }, min: 40, max: 60 };
-  function grindSetting() {
-    const v = GRINDER.base[st.roast] + (RECIPES[st.recipe].grindOffset || 0);
-    return Math.min(GRINDER.max, Math.max(GRINDER.min, Math.round(v * 2) / 2));
+  const clampGrind = (v) => Math.min(GRINDER.max, Math.max(GRINDER.min, Math.round(v * 2) / 2));
+  function baseGrind() { return clampGrind(GRINDER.base[st.roast] + (RECIPES[st.recipe].grindOffset || 0)); }
+  // The latest logged brew of this recipe and roast decides the next setting.
+  function lastBrew() { return loadLog().find((e) => e.recipe === st.recipe && e.roast === st.roast) || null; }
+  function grindSetting() { const e = lastBrew(); return e && e.nextGrind ? e.nextGrind : baseGrind(); }
+  function nextGrindFor(e) {
+    // A 4–5 star cup keeps its grind; otherwise steer by how the drawdown finished.
+    if (e.rating >= 4) return e.grind;
+    if (e.late > 20) return clampGrind(e.grind + 1);
+    if (e.late < -20) return clampGrind(e.grind - 1);
+    return e.grind;
   }
   const ROASTS = {
     light:  { name: "Light",  temp: "96–100 °C", ratioAdj: 0,  grind: "a touch finer" },
@@ -241,6 +287,15 @@ details code { font-family: var(--mono); word-break: break-all; }
     get(k) { try { return JSON.parse(localStorage.getItem("v60:" + k)); } catch { return null; } },
     set(k, v) { try { localStorage.setItem("v60:" + k, JSON.stringify(v)); } catch {} },
   };
+
+  // ---------- Brew log (kept on this phone) ----------
+  function loadLog() { const l = store.get("log"); return Array.isArray(l) ? l : []; }
+  function saveLog(l) { store.set("log", l.slice(0, 200)); }
+  function upsertLog(e) {
+    e.nextGrind = nextGrindFor(e);
+    const l = loadLog().filter((x) => x.id !== e.id);
+    l.unshift(e); saveLog(l); renderLog();
+  }
 
   // ---------- State ----------
   const st = {
@@ -308,7 +363,7 @@ details code { font-family: var(--mono); word-break: break-all; }
       ["Ratio", "1:" + ratio().toFixed(1).replace(/\.0$/, "")],
       ["Water temperature", R.temp || ro.temp],
       ["Grind", R.grind + ", " + ro.grind],
-      [GRINDER.name, grindSetting() + "  (try " + (grindSetting() - 1) + "–" + (grindSetting() + 1) + ")"],
+      [GRINDER.name, grindSetting() + (lastBrew() ? "  (from your last brew)" : "  (start here, try " + (baseGrind() - 1) + "–" + (baseGrind() + 1) + ")")],
     ];
     $("specs").innerHTML = specs.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join("");
   }
@@ -351,18 +406,33 @@ details code { font-family: var(--mono); word-break: break-all; }
     st.t0 = performance.now();
     st.stepIdx = 0; st.stepStartT = 0; st.stepStartW = 0;
     st.lastTick = null; st.lateCued = false;
+    st.peakW = 0; st.dropT = null; st.grindAtStart = grindSetting();
     keepAwake(true);
     cue();
+    say(sayStep(st.plan[0]));
   }
-  function finishBrew() {
-    st.finalT = now();
+  function finishBrew(atT) {
+    st.finalT = atT != null ? atT : now();
     st.phase = "done";
     keepAwake(false);
     cue("end");
+    const poured = Math.max(st.peakW || 0, st.weight);
+    const end = st.plan[st.plan.length - 1];
+    st.entry = {
+      id: Date.now(), date: new Date().toISOString(),
+      recipe: st.recipe, recipeName: RECIPES[st.recipe].name, roast: st.roast,
+      dose: st.dose, water: Math.round(poured), time: Math.round(st.finalT),
+      late: end && end.until ? Math.round(st.finalT - end.until) : 0,
+      grind: st.grindAtStart || grindSetting(), rating: 0, note: "",
+    };
+    upsertLog(st.entry);
+    renderRate(); renderSetup();
+    say(`Done in ${Math.floor(st.finalT / 60)} minutes ${Math.round(st.finalT % 60)} seconds. Enjoy.`);
   }
   function resetBrew() {
-    st.phase = "idle"; st.stepIdx = 0; st.finalT = 0;
+    st.phase = "idle"; st.stepIdx = 0; st.finalT = 0; st.entry = null;
     keepAwake(false);
+    renderRate(); renderSetup();
     renderPlan(); renderBrew();
   }
   function advance(t) {
@@ -374,6 +444,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     while (st.stepIdx < st.plan.length && st.plan[st.stepIdx].kind === "wait" && t >= st.plan[st.stepIdx].until) st.stepIdx++;
     if (st.stepIdx >= st.plan.length) { finishBrew(); return; }
     cue();
+    say(sayStep(st.plan[st.stepIdx]));
     renderPlan();
   }
   function tick() {
@@ -384,13 +455,21 @@ details code { font-family: var(--mono); word-break: break-all; }
     }
     if (st.phase === "brewing") {
       const t = now(), s = st.plan[st.stepIdx];
+      st.peakW = Math.max(st.peakW || 0, st.weight);
+      // Auto-finish: after the last pour, a sharp drop means the V60 was lifted off.
+      if (s.kind === "drain" || (s.kind === "wait" && !st.plan.slice(st.stepIdx).some((x) => x.kind === "pour"))) {
+        if (st.weight < st.peakW - 30) {
+          if (st.dropT == null) st.dropT = t;
+          else if (t - st.dropT > 0.6) { finishBrew(st.dropT); renderPlan(); renderBrew(); return; }
+        } else st.dropT = null;
+      }
       if (s.kind === "pour" && st.weight >= s.target - 1) advance(t);
       else if (s.kind === "wait" && t >= s.until) advance(t);
       else if (s.kind === "wait") {
         // Count down the last 3 seconds before the next pour.
         const left = Math.ceil(s.until - t);
-        if (left <= 3 && left >= 1 && st.lastTick !== left) { st.lastTick = left; cue("tick"); }
-      } else if (s.kind === "pour" && t > s.by + 3 && !st.lateCued) { st.lateCued = true; cue("late"); }
+        if (left <= 3 && left >= 1 && st.lastTick !== left) { st.lastTick = left; cue("tick"); say(String(left), true); }
+      } else if (s.kind === "pour" && t > s.by + 3 && !st.lateCued) { st.lateCued = true; cue("late"); say("Pour a little faster"); }
     }
     renderBrew();
   }
@@ -440,14 +519,12 @@ details code { font-family: var(--mono); word-break: break-all; }
       next = `Total: ${W} g of water at ${RECIPES[st.recipe].temp || ROASTS[st.roast].temp}`;
     } else if (st.phase === "done") {
       what = "Enjoy your coffee";
-      how = `Brewed ${fmtG(st.weight)} g of water in ${fmtT(st.finalT)} with ${st.dose} g of coffee (1:${(st.weight / st.dose).toFixed(1)}).`;
-      // Grind advice from how the drawdown went against the recipe's target finish.
-      const end = st.plan[st.plan.length - 1], g = grindSetting();
-      if (end && end.until) {
-        const diff = st.finalT - end.until;
-        if (diff > 20) target = `Finished ${Math.round(diff)} s late. Next time try ${g + 1} on the ${GRINDER.name}.`;
-        else if (diff < -20) target = `Finished ${Math.round(-diff)} s early. Next time try ${g - 1} on the ${GRINDER.name}.`;
-        else target = `Right on time. Keep ${g} on the ${GRINDER.name}.`;
+      const e = st.entry;
+      if (e) {
+        how = `Brewed ${e.water} g of water in ${fmtT(e.time)} with ${e.dose} g of coffee (1:${(e.water / e.dose).toFixed(1)}).`;
+        const when = e.late > 20 ? `Finished ${e.late} s late. ` : e.late < -20 ? `Finished ${-e.late} s early. ` : "Right on time. ";
+        const nx = e.nextGrind;
+        target = when + (nx === e.grind ? `Keep ${nx} on the ${GRINDER.name}.` : `Next time try ${nx} on the ${GRINDER.name}.`);
       }
       fill = 1;
     } else {
@@ -491,6 +568,74 @@ details code { font-family: var(--mono); word-break: break-all; }
     $("step").classList.toggle("done-card", st.phase === "done");
     $("setup").hidden = st.phase === "armed" || st.phase === "brewing";
     for (const b of document.querySelectorAll("#recipeSel, #roasts button, #dose, #doseMinus, #dosePlus")) b.disabled = st.phase === "brewing";
+  }
+
+  // ---------- Voice prompts ----------
+  let voiceOn = store.get("voice") !== false;
+  function say(text, quick) {
+    if (!voiceOn || !text || !("speechSynthesis" in window)) return;
+    try {
+      if (!quick) speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-GB"; u.rate = quick ? 1.2 : 1.05;
+      speechSynthesis.speak(u);
+    } catch {}
+  }
+  function sayStep(s) {
+    if (!s) return "";
+    if (s.kind === "pour") return `${s.what}. Pour to ${s.target} grams.`;
+    if (s.kind === "drain") return `${s.what}. Lift the dripper off when it stops dripping.`;
+    return "";
+  }
+  function renderVoice() {
+    $("btnVoice").setAttribute("aria-pressed", voiceOn);
+    $("btnVoice").textContent = voiceOn ? "Voice on" : "Voice off";
+  }
+  $("btnVoice").onclick = () => {
+    voiceOn = !voiceOn; store.set("voice", voiceOn); renderVoice();
+    if (voiceOn) say("Voice on"); else try { speechSynthesis.cancel(); } catch {}
+  };
+
+  // ---------- Rating and log UI ----------
+  function renderRate() {
+    const e = st.entry;
+    $("rate").hidden = !(st.phase === "done" && e);
+    if (!e) return;
+    const box = $("stars"); box.innerHTML = "";
+    for (let i = 1; i <= 5; i++) {
+      const b = document.createElement("button");
+      b.textContent = i <= e.rating ? "★" : "☆";
+      b.setAttribute("aria-label", i + " star" + (i > 1 ? "s" : ""));
+      b.setAttribute("aria-pressed", i <= e.rating);
+      b.onclick = () => { e.rating = i; upsertLog(e); renderRate(); renderBrew(); renderSetup(); };
+      box.append(b);
+    }
+    if (document.activeElement !== $("grindUsed")) $("grindUsed").value = e.grind;
+    if (document.activeElement !== $("note")) $("note").value = e.note;
+  }
+  $("grindUsed").addEventListener("change", (ev) => {
+    const v = parseFloat(ev.target.value);
+    if (st.entry && isFinite(v)) { st.entry.grind = clampGrind(v); upsertLog(st.entry); renderRate(); renderBrew(); }
+  });
+  $("note").addEventListener("change", (ev) => { if (st.entry) { st.entry.note = ev.target.value.trim(); upsertLog(st.entry); } });
+  function renderLog() {
+    const l = loadLog(), ul = $("log");
+    $("logEmpty").hidden = l.length > 0;
+    ul.innerHTML = "";
+    for (const e of l.slice(0, 30)) {
+      const li = document.createElement("li");
+      const d = new Date(e.date);
+      const l1 = document.createElement("div"); l1.className = "l1";
+      l1.textContent = `${e.recipeName} · ${(ROASTS[e.roast] || {}).name || e.roast}`;
+      const l2 = document.createElement("div"); l2.className = "l2";
+      const stars = e.rating ? " · " + "★".repeat(e.rating) : "";
+      l2.textContent = `${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })} · ${e.dose} g / ${e.water} g · ${fmtT(e.time)} · grind ${e.grind}${stars}`;
+      const rm = document.createElement("button"); rm.textContent = "Remove";
+      rm.onclick = () => { saveLog(loadLog().filter((x) => x.id !== e.id)); renderLog(); renderSetup(); };
+      li.append(l1, rm, l2);
+      if (e.note) { const l3 = document.createElement("div"); l3.className = "l3"; l3.textContent = e.note; li.append(l3); }
+      ul.append(li);
+    }
   }
 
   // ---------- Cues: vibration, a short beep, screen awake ----------
@@ -614,10 +759,12 @@ details code { font-family: var(--mono); word-break: break-all; }
     demo = { total: 18.2, offset: 0, last: performance.now() };
     demo.timer = setInterval(() => {
       const t = performance.now(), dt = (t - demo.last) / 1000; demo.last = t;
-      if (st.phase === "armed") demo.total += 6 * dt;
+      if (st.phase === "armed") { demo.total += 6 * dt; demo.lifted = false; }
       if (st.phase === "brewing") {
         const s = st.plan[st.stepIdx];
         if (s && s.kind === "pour" && demo.total - demo.offset < s.target) demo.total += 5.2 * dt;
+        // Near the end of the drawdown, lift the V60 off (about 120 g leaves the scale).
+        if (s && s.kind === "drain" && !demo.lifted && now() > s.until - 5) { demo.lifted = true; demo.total -= 120; }
       }
       st.weight = Math.round((demo.total - demo.offset + (Math.random() - 0.5) * 0.2) * 10) / 10;
       tick();
@@ -636,6 +783,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     if (st.phase === "done") resetBrew();
     // Start arms auto-start: tare, then the timer begins with the first water.
     unlockAudio();
+    say(`Ready. Start pouring to ${st.plan[0].target} grams.`);
     await tare();
     st.phase = "armed";
     st.sawZero = !!demo; // the demo tares instantly
@@ -645,6 +793,7 @@ details code { font-family: var(--mono); word-break: break-all; }
   setInterval(() => { if (st.phase === "brewing") tick(); }, 250);
 
   refresh();
+  renderVoice(); renderLog();
   loadLibrary();
   // Installable app: works offline once opened. Not available inside previews.
   try { if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {}); } catch {}

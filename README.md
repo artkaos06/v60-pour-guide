@@ -8,6 +8,14 @@ Recipes include Hoffmann, Kasuya 4:6 and its variations, Rao, an iced V60 and mo
 
 Built for the KP2048B Smart Kitchen Scale.
 
+## Features
+
+- Live weight, timer and step-by-step pours from the scale
+- Voice prompts (toggle in the header), countdown ticks and vibration
+- Auto-finish when you lift the V60 off the scale
+- Brew log with rating and notes, kept on your phone
+- Encore ESP Pro grind suggestion that learns from your last brew of the same recipe and roast
+
 ## Recipes
 
 Recipes live in `recipes.json`. Each pour target is a fraction of the total water (`to`) or a multiple of the coffee dose (`toDose`); `by` and `until` are seconds from the first pour. Send Claude a recipe link to add one.
