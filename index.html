@@ -57,11 +57,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .notice[hidden] { display: none; }
 
 /* setup */
-.recipes { display: grid; gap: 8px; }
-.recipe { text-align: left; display: grid; gap: 2px; font-weight: 400; padding: 10px 12px; }
-.recipe b { font: 700 1rem/1.2 var(--display); }
-.recipe span { font-size: 0.85rem; color: var(--muted); }
-.recipe[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.picker { display: grid; gap: 6px; }
+.picker select { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: 700 1.05rem/1.2 var(--display); }
+.picker .blurb { font-size: 0.9rem; }
+.picker .source { font-size: 0.8rem; color: var(--muted); }
 .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .seg button { padding: 8px 6px; font-weight: 500; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -117,7 +116,11 @@ details code { font-family: var(--mono); word-break: break-all; }
   <section class="panel" id="setup">
     <div>
       <h2>Recipe</h2>
-      <div class="recipes" id="recipes"></div>
+      <div class="picker">
+        <select id="recipeSel" aria-label="Recipe"></select>
+        <div class="blurb" id="recipeBlurb"></div>
+        <div class="source" id="recipeSource"></div>
+      </div>
     </div>
     <div>
       <h2>Roast</h2>
@@ -168,7 +171,8 @@ details code { font-family: var(--mono); word-break: break-all; }
   // ---------- Recipes ----------
   // Pour targets are fractions of the total water; times in seconds.
   // "by" is when that pour should be finished; "until" ends a wait.
-  const RECIPES = {
+  // Built-in fallback; the full library loads from recipes.json next to this page.
+  let RECIPES = {
     hoffmann1: {
       name: "Hoffmann one cup",
       blurb: "15 g · 250 ml · five even pours, clean and sweet",
@@ -247,6 +251,23 @@ details code { font-family: var(--mono); word-break: break-all; }
   };
   st.dose = store.get("dose:" + st.recipe) || RECIPES[st.recipe].dose;
 
+  async function loadLibrary() {
+    try {
+      const res = await fetch("recipes.json", { cache: "no-cache" });
+      if (!res.ok) return;
+      const lib = await res.json();
+      const next = {};
+      for (const r of lib.recipes || []) if (r && r.id && Array.isArray(r.steps) && r.steps.length) next[r.id] = r;
+      if (!Object.keys(next).length) return;
+      RECIPES = next;
+      const saved = store.get("recipe");
+      if (st.phase === "idle" && saved in RECIPES) st.recipe = saved;
+      if (!(st.recipe in RECIPES)) st.recipe = Object.keys(RECIPES)[0];
+      st.dose = store.get("dose:" + st.recipe) || RECIPES[st.recipe].dose;
+      if (st.phase !== "brewing") refresh();
+    } catch {}
+  }
+
   function ratio() { return RECIPES[st.recipe].ratio + ROASTS[st.roast].ratioAdj; }
   function water() { return Math.round(st.dose * ratio()); }
   function buildPlan() {
@@ -260,22 +281,11 @@ details code { font-family: var(--mono); word-break: break-all; }
 
   // ---------- Setup UI ----------
   function renderSetup() {
-    $("recipes").innerHTML = "";
-    for (const [k, r] of Object.entries(RECIPES)) {
-      const b = document.createElement("button");
-      b.className = "recipe";
-      b.setAttribute("aria-pressed", k === st.recipe);
-      b.innerHTML = `<b></b><span></span>`;
-      b.querySelector("b").textContent = r.name;
-      b.querySelector("span").textContent = r.blurb;
-      b.onclick = () => {
-        if (st.phase === "brewing") return;
-        st.recipe = k; store.set("recipe", k);
-        st.dose = store.get("dose:" + k) || r.dose;
-        refresh();
-      };
-      $("recipes").append(b);
-    }
+    const sel = $("recipeSel");
+    sel.innerHTML = "";
+    for (const [k, r] of Object.entries(RECIPES)) sel.add(new Option(r.name, k, false, k === st.recipe));
+    $("recipeBlurb").textContent = RECIPES[st.recipe].blurb || "";
+    $("recipeSource").textContent = RECIPES[st.recipe].source ? "From " + RECIPES[st.recipe].source : "";
     $("roasts").innerHTML = "";
     for (const [k, r] of Object.entries(ROASTS)) {
       const b = document.createElement("button");
@@ -289,7 +299,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     const specs = [
       ["Water", water() + " g"],
       ["Ratio", "1:" + ratio().toFixed(1).replace(/\.0$/, "")],
-      ["Water temperature", ro.temp],
+      ["Water temperature", R.temp || ro.temp],
       ["Grind", R.grind + ", " + ro.grind],
     ];
     $("specs").innerHTML = specs.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join("");
@@ -299,6 +309,12 @@ details code { font-family: var(--mono); word-break: break-all; }
     if (!isFinite(v)) return;
     st.dose = v; store.set("dose:" + st.recipe, v); refresh();
   }
+  $("recipeSel").addEventListener("change", (e) => {
+    if (st.phase === "brewing" || !(e.target.value in RECIPES)) return;
+    st.recipe = e.target.value; store.set("recipe", st.recipe);
+    st.dose = store.get("dose:" + st.recipe) || RECIPES[st.recipe].dose;
+    refresh();
+  });
   $("dose").addEventListener("change", (e) => setDose(parseFloat(e.target.value)));
   $("doseMinus").onclick = () => setDose(st.dose - 0.5);
   $("dosePlus").onclick = () => setDose(st.dose + 0.5);
@@ -406,7 +422,7 @@ details code { font-family: var(--mono); word-break: break-all; }
         ? "The timer starts as soon as the scale sees water."
         : "Rinse the paper, add the ground coffee, then press Tare. The timer starts by itself when you begin pouring.";
       mark = first.target / W;
-      next = `Total: ${W} g of water at ${ROASTS[st.roast].temp}`;
+      next = `Total: ${W} g of water at ${RECIPES[st.recipe].temp || ROASTS[st.roast].temp}`;
     } else if (st.phase === "done") {
       what = "Enjoy your coffee";
       how = `Brewed ${fmtG(st.weight)} g of water in ${fmtT(st.finalT)} with ${st.dose} g of coffee (1:${(st.weight / st.dose).toFixed(1)}).`;
@@ -451,7 +467,7 @@ details code { font-family: var(--mono); word-break: break-all; }
     $("barMark").hidden = !mark || st.phase === "brewing";
     $("step").classList.toggle("done-card", st.phase === "done");
     $("setup").hidden = st.phase === "armed" || st.phase === "brewing";
-    for (const b of document.querySelectorAll("#recipes button, #roasts button, #dose, #doseMinus, #dosePlus")) b.disabled = st.phase === "brewing";
+    for (const b of document.querySelectorAll("#recipeSel, #roasts button, #dose, #doseMinus, #dosePlus")) b.disabled = st.phase === "brewing";
   }
 
   // ---------- Cues: vibration, a short beep, screen awake ----------
@@ -587,6 +603,7 @@ details code { font-family: var(--mono); word-break: break-all; }
   setInterval(() => { if (st.phase === "brewing") tick(); }, 250);
 
   refresh();
+  loadLibrary();
 })();
 </script>
 

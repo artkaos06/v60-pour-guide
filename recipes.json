@@ -1,0 +1,167 @@
+{
+  "_format": "Pour targets: 'to' is a fraction of total water, 'toDose' a multiple of the coffee dose. 'by' is when a pour should finish, 'until' when a wait or drawdown ends (seconds from the first pour).",
+  "recipes": [
+    {
+      "id": "hoffmann1",
+      "name": "Hoffmann one cup",
+      "source": "James Hoffmann, A Better 1 Cup V60 Technique",
+      "blurb": "15 g · 250 ml · five even pours, clean and sweet",
+      "dose": 15, "ratio": 16.67, "grind": "Medium-fine",
+      "steps": [
+        { "kind": "pour", "to": 0.2, "by": 10, "what": "Bloom", "how": "Pour gently to wet all the coffee, then give it a light swirl." },
+        { "kind": "wait", "until": 45, "what": "Let it bloom" },
+        { "kind": "pour", "to": 0.4, "by": 60, "what": "Second pour", "how": "Pour in slow spirals." },
+        { "kind": "wait", "until": 70, "what": "Pause" },
+        { "kind": "pour", "to": 0.6, "by": 80, "what": "Third pour", "how": "Keep the stream steady." },
+        { "kind": "wait", "until": 90, "what": "Pause" },
+        { "kind": "pour", "to": 0.8, "by": 100, "what": "Fourth pour", "how": "Pour in slow spirals." },
+        { "kind": "wait", "until": 110, "what": "Pause" },
+        { "kind": "pour", "to": 1.0, "by": 120, "what": "Last pour", "how": "Finish, then swirl the V60 once to flatten the bed." },
+        { "kind": "drain", "until": 180, "what": "Drawdown", "how": "Let it drain. Aim to finish around 3:00." }
+      ]
+    },
+    {
+      "id": "hoffmannUltimate",
+      "name": "Hoffmann Ultimate",
+      "source": "James Hoffmann, The Ultimate V60 Technique",
+      "blurb": "30 g · 500 ml · big bloom, two main pours",
+      "dose": 30, "ratio": 16.67, "grind": "Medium-fine",
+      "steps": [
+        { "kind": "pour", "toDose": 2, "by": 10, "what": "Bloom", "how": "Pour twice the coffee weight, then swirl until evenly wet." },
+        { "kind": "wait", "until": 45, "what": "Let it bloom" },
+        { "kind": "pour", "to": 0.6, "by": 75, "what": "Main pour", "how": "Pour to 60% in steady spirals." },
+        { "kind": "pour", "to": 1.0, "by": 105, "what": "Final pour", "how": "Pour a little more gently to the top." },
+        { "kind": "drain", "until": 210, "what": "Stir, swirl, drain", "how": "Stir once each way with a spoon, swirl, and let it drain. Finish around 3:30." }
+      ]
+    },
+    {
+      "id": "hoffmannIced",
+      "name": "Hoffmann iced V60",
+      "source": "James Hoffmann, Japanese iced coffee method",
+      "blurb": "32.5 g · 300 g hot water onto 200 g ice",
+      "dose": 32.5, "ratio": 9.23, "grind": "Medium-fine, a little finer than hot", "temp": "Just off the boil",
+      "steps": [
+        { "kind": "pour", "toDose": 2, "by": 10, "what": "Bloom", "how": "Put 200 g of ice in the server before you tare. Pour twice the coffee weight and swirl." },
+        { "kind": "wait", "until": 45, "what": "Let it bloom" },
+        { "kind": "pour", "to": 0.6, "by": 75, "what": "Main pour", "how": "Pour in steady spirals." },
+        { "kind": "pour", "to": 1.0, "by": 105, "what": "Final pour", "how": "Pour gently to the top, then swirl." },
+        { "kind": "drain", "until": 180, "what": "Drawdown", "how": "Let it drain, then swirl the server until the ice has melted." }
+      ]
+    },
+    {
+      "id": "kasuya46",
+      "name": "Kasuya 4:6",
+      "source": "Tetsu Kasuya, World Brewers Cup 2016",
+      "blurb": "20 g · 300 ml · five pours every 45 s, coarse grind",
+      "dose": 20, "ratio": 15, "grind": "Coarse",
+      "steps": [
+        { "kind": "pour", "to": 0.2, "by": 10, "what": "Pour 1 of 5", "how": "The first two pours set sweetness and acidity." },
+        { "kind": "wait", "until": 45, "what": "Wait" },
+        { "kind": "pour", "to": 0.4, "by": 55, "what": "Pour 2 of 5", "how": "Pour evenly over the bed." },
+        { "kind": "wait", "until": 90, "what": "Wait" },
+        { "kind": "pour", "to": 0.6, "by": 100, "what": "Pour 3 of 5", "how": "The last three pours set strength." },
+        { "kind": "wait", "until": 135, "what": "Wait" },
+        { "kind": "pour", "to": 0.8, "by": 145, "what": "Pour 4 of 5", "how": "Pour evenly over the bed." },
+        { "kind": "wait", "until": 180, "what": "Wait" },
+        { "kind": "pour", "to": 1.0, "by": 190, "what": "Pour 5 of 5", "how": "Last pour." },
+        { "kind": "drain", "until": 210, "what": "Drawdown", "how": "Remove the V60 at 3:30 even if water remains." }
+      ]
+    },
+    {
+      "id": "kasuya46Sweet",
+      "name": "Kasuya 4:6, sweeter",
+      "source": "Tetsu Kasuya, 4:6 method (small first pour)",
+      "blurb": "20 g · 300 ml · smaller first pour for more sweetness",
+      "dose": 20, "ratio": 15, "grind": "Coarse",
+      "steps": [
+        { "kind": "pour", "to": 0.1667, "by": 10, "what": "Pour 1 of 5", "how": "A smaller first pour tilts the cup toward sweetness." },
+        { "kind": "wait", "until": 45, "what": "Wait" },
+        { "kind": "pour", "to": 0.4, "by": 55, "what": "Pour 2 of 5", "how": "A bigger second pour." },
+        { "kind": "wait", "until": 90, "what": "Wait" },
+        { "kind": "pour", "to": 0.6, "by": 100, "what": "Pour 3 of 5", "how": "The last three pours set strength." },
+        { "kind": "wait", "until": 135, "what": "Wait" },
+        { "kind": "pour", "to": 0.8, "by": 145, "what": "Pour 4 of 5", "how": "Pour evenly over the bed." },
+        { "kind": "wait", "until": 180, "what": "Wait" },
+        { "kind": "pour", "to": 1.0, "by": 190, "what": "Pour 5 of 5", "how": "Last pour." },
+        { "kind": "drain", "until": 210, "what": "Drawdown", "how": "Remove the V60 at 3:30 even if water remains." }
+      ]
+    },
+    {
+      "id": "kasuya46Bright",
+      "name": "Kasuya 4:6, brighter",
+      "source": "Tetsu Kasuya, 4:6 method (big first pour)",
+      "blurb": "20 g · 300 ml · bigger first pour for more acidity",
+      "dose": 20, "ratio": 15, "grind": "Coarse",
+      "steps": [
+        { "kind": "pour", "to": 0.2333, "by": 10, "what": "Pour 1 of 5", "how": "A bigger first pour tilts the cup toward brightness." },
+        { "kind": "wait", "until": 45, "what": "Wait" },
+        { "kind": "pour", "to": 0.4, "by": 55, "what": "Pour 2 of 5", "how": "A smaller second pour." },
+        { "kind": "wait", "until": 90, "what": "Wait" },
+        { "kind": "pour", "to": 0.6, "by": 100, "what": "Pour 3 of 5", "how": "The last three pours set strength." },
+        { "kind": "wait", "until": 135, "what": "Wait" },
+        { "kind": "pour", "to": 0.8, "by": 145, "what": "Pour 4 of 5", "how": "Pour evenly over the bed." },
+        { "kind": "wait", "until": 180, "what": "Wait" },
+        { "kind": "pour", "to": 1.0, "by": 190, "what": "Pour 5 of 5", "how": "Last pour." },
+        { "kind": "drain", "until": 210, "what": "Drawdown", "how": "Remove the V60 at 3:30 even if water remains." }
+      ]
+    },
+    {
+      "id": "kasuya46Light",
+      "name": "Kasuya 4:6, lighter body",
+      "source": "Tetsu Kasuya, 4:6 method (fewer strength pours)",
+      "blurb": "20 g · 300 ml · four pours for a lighter cup",
+      "dose": 20, "ratio": 15, "grind": "Coarse",
+      "steps": [
+        { "kind": "pour", "to": 0.2, "by": 10, "what": "Pour 1 of 4", "how": "The first two pours set sweetness and acidity." },
+        { "kind": "wait", "until": 45, "what": "Wait" },
+        { "kind": "pour", "to": 0.4, "by": 55, "what": "Pour 2 of 4", "how": "Pour evenly over the bed." },
+        { "kind": "wait", "until": 90, "what": "Wait" },
+        { "kind": "pour", "to": 0.7, "by": 105, "what": "Pour 3 of 4", "how": "Fewer, larger pours give a lighter body." },
+        { "kind": "wait", "until": 135, "what": "Wait" },
+        { "kind": "pour", "to": 1.0, "by": 150, "what": "Pour 4 of 4", "how": "Last pour." },
+        { "kind": "drain", "until": 210, "what": "Drawdown", "how": "Remove the V60 at 3:30 even if water remains." }
+      ]
+    },
+    {
+      "id": "raoSpin",
+      "name": "Rao bloom and spin",
+      "source": "Adapted from Scott Rao's V60 approach",
+      "blurb": "20 g · 330 ml · big bloom, one main pour, a spin at the end",
+      "dose": 20, "ratio": 16.5, "grind": "Medium-fine",
+      "steps": [
+        { "kind": "pour", "toDose": 3, "by": 10, "what": "Bloom", "how": "Pour three times the coffee weight and stir gently so every ground is wet." },
+        { "kind": "wait", "until": 45, "what": "Let it bloom" },
+        { "kind": "pour", "to": 1.0, "by": 105, "what": "Main pour", "how": "One steady pour in small circles, keeping the level high." },
+        { "kind": "drain", "until": 195, "what": "Spin and drain", "how": "Give the V60 a quick spin to flatten the bed, then let it drain. Aim for about 3:15." }
+      ]
+    },
+    {
+      "id": "singlePour",
+      "name": "Bloom and one pour",
+      "source": "Adapted from Lance Hedrick's single-pour V60",
+      "blurb": "15 g · 250 ml · simple and forgiving",
+      "dose": 15, "ratio": 16.67, "grind": "Medium-fine",
+      "steps": [
+        { "kind": "pour", "toDose": 3, "by": 10, "what": "Bloom", "how": "Pour three times the coffee weight and swirl." },
+        { "kind": "wait", "until": 45, "what": "Let it bloom" },
+        { "kind": "pour", "to": 1.0, "by": 105, "what": "One pour", "how": "Pour slowly and continuously in small circles in the center." },
+        { "kind": "drain", "until": 180, "what": "Swirl and drain", "how": "Swirl gently once and let it drain. Aim for about 3:00." }
+      ]
+    },
+    {
+      "id": "classic3",
+      "name": "Classic three pours",
+      "source": "Common café method",
+      "blurb": "18 g · 300 ml · bloom then two pours",
+      "dose": 18, "ratio": 16.67, "grind": "Medium",
+      "steps": [
+        { "kind": "pour", "toDose": 2.2, "by": 10, "what": "Bloom", "how": "Wet all the coffee." },
+        { "kind": "wait", "until": 40, "what": "Let it bloom" },
+        { "kind": "pour", "to": 0.57, "by": 70, "what": "Second pour", "how": "Pour in slow spirals, avoiding the paper." },
+        { "kind": "wait", "until": 80, "what": "Pause" },
+        { "kind": "pour", "to": 1.0, "by": 110, "what": "Last pour", "how": "Pour in slow spirals to the top." },
+        { "kind": "drain", "until": 180, "what": "Drawdown", "how": "Let it drain. Aim for about 3:00." }
+      ]
+    }
+  ]
+}
